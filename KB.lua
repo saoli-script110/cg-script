@@ -1481,7 +1481,7 @@ local MapGuiParent = nil
 task.spawn(function()
     pcall(function()
         -- 以后Explorer查到真实名字在这里修改
-        MapGuiParent = player.PlayerGui:WaitForChild("MapGui"):WaitForChild("MapFrame",3)
+ MapGuiParent = player.PlayerGui:WaitForChild("WorldMapScreen"):WaitForChild("MapCanvas",3)
     end)
 end)
 
@@ -1564,3 +1564,65 @@ teleLeftGroup:AddButton("地图传送测试", function()
     end
     Library:Notify({Title="测试结果",Description="地图控件已找到，可以使用！",Time=2})
 end)
+-- 加到你现有CG脚本UI里面，新增【警察功能】分类，开关：靠近自动铐人
+-- 依赖：你的脚本已有 Library、teleLeftGroup 面板系统，PlayerEvent 在ReplicatedStorage
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local localPlr = Players.LocalPlayer
+
+local PlayerEvent = ReplicatedStorage:WaitForChild("PlayerEvent")
+
+-- 配置
+local AUTO_CUFF_ENABLE = false
+local CUFF_RANGE = 6
+local REQUIRED_HP = 25
+
+-- 自动扫描循环
+task.spawn(function()
+    while task.wait(0.1) do
+        if not AUTO_CUFF_ENABLE then continue end
+        local myChar = localPlr.Character
+        if not myChar then continue end
+        local myRoot = myChar:FindFirstChild("HumanoidRootPart")
+        if not myRoot then continue end
+
+        for _,targetPlr in ipairs(Players:GetPlayers()) do
+            if targetPlr == localPlr then continue end
+            local tChar = targetPlr.Character
+            if not tChar then continue end
+            local tRoot = tChar:FindFirstChild("HumanoidRootPart")
+            local tHum = tChar:FindFirstChildOfClass("Humanoid")
+            if not tRoot or not tHum then continue end
+
+            local dist = (myRoot.Position - tRoot.Position).Magnitude
+            if dist <= CUFF_RANGE and tHum.Health <= REQUIRED_HP then
+                PlayerEvent:FireServer("cuff", targetPlr)
+            end
+        end
+    end
+end)
+
+-- 在你现有的UI面板添加分组
+local policeGroup = teleLeftGroup:AddFolder("👮警察功能")
+
+policeGroup:AddToggle("AutoCuffToggle", {
+    Text = "靠近自动铐人",
+    Default = false,
+    Callback = function(state)
+        AUTO_CUFF_ENABLE = state
+        if state then
+            Library:Notify({
+                Title="警察功能",
+                Description="✅自动铐已开启，靠近倒地玩家自动铐",
+                Time=3
+            })
+        else
+            Library:Notify({
+                Title="警察功能",
+                Description="❌自动铐已关闭",
+                Time=3
+            })
+        end
+    end
+})

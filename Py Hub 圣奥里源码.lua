@@ -119,22 +119,29 @@ local function flyLoop()
         local hum = char:FindFirstChildOfClass("Humanoid")
         if not hrp or not hum then task.wait(0.1) continue end
 
-        flyState.hrp = hrp
-        flyState.hum = hum
         hum.PlatformStand = true
         hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
         hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
+        hum.GravityScale = 0 -- 关闭重力！解决松开就往下掉
 
         local cam = workspace.CurrentCamera
         local moveVec = Vector3.new(0,0,0)
         if controls then
             local mv = controls:GetMoveVector()
-            -- 读取摇杆，用镜头朝向作为飞行方向（镜头朝上就向上飞）
             moveVec = cam.CFrame:VectorToWorldSpace(Vector3.new(mv.X, 0, mv.Z))
-            moveVec = moveVec.Unit
         end
-        hrp.Velocity = moveVec * FlySpeed
-        task.wait(0.001)
+
+        if moveVec.Magnitude > 0 then
+            moveVec = moveVec.Unit * FlySpeed
+        else
+            moveVec = Vector3.new(0,0,0)
+        end
+
+        local delta = RunService.Heartbeat:Wait()
+        local newPos = hrp.Position + moveVec * delta
+
+        -- 锁定人物：只允许Y轴转向，俯仰/翻滚全部锁死，人物保持立正
+        hrp.CFrame = CFrame.new(newPos) * CFrame.Angles(0, cam.CFrame.Y, 0)
     end
 end
 
@@ -157,6 +164,7 @@ function stopFly()
     end
     if flyState.hum then
         flyState.hum.PlatformStand = false
+        flyState.hum.GravityScale = 1 -- 关闭飞行恢复重力
         flyState.hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
     end
 end

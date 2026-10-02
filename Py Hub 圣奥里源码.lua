@@ -122,16 +122,15 @@ local function flyLoop()
         flyState.hrp = hrp
         flyState.hum = hum
         hum.PlatformStand = true
+        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
+        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
 
         local cam = workspace.CurrentCamera
         local moveVec = Vector3.new(0,0,0)
         if controls then
             local mv = controls:GetMoveVector()
+            -- 读取摇杆，用镜头朝向作为飞行方向（镜头朝上就向上飞）
             moveVec = cam.CFrame:VectorToWorldSpace(Vector3.new(mv.X, 0, mv.Z))
-            moveVec = Vector3.new(moveVec.X,0,moveVec.Z).Unit
-        end
-
-        if moveVec.Magnitude>0 then
             moveVec = moveVec.Unit
         end
         hrp.Velocity = moveVec * FlySpeed
@@ -158,6 +157,7 @@ function stopFly()
     end
     if flyState.hum then
         flyState.hum.PlatformStand = false
+        flyState.hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
     end
 end
 

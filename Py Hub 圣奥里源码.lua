@@ -99,8 +99,9 @@ local FlySpeed = 35
 local flyState = {
     enabled = false,
     hrp = nil,
-    hum = nil,
-    flyLoopThread = nil
+    bp = nil,
+    bg = nil,
+    conn = nil
 }
 local controls = nil
 
@@ -111,62 +112,68 @@ task.spawn(function()
     end)
 end)
 
-local function flyLoop()
-    while flyState.enabled do
-        local char = lp.Character
-        if not char then task.wait(0.1) continue end
-        local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChildOfClass("Humanoid")
-        if not hrp or not hum then task.wait(0.1) continue end
-
-        hum.PlatformStand = true
-        hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, false)
-        hum:SetStateEnabled(Enum.HumanoidStateType.FallingDown, false)
-        hum.GravityScale = 0 -- 关闭重力！解决松开就往下掉
-
-        local cam = workspace.CurrentCamera
-        local moveVec = Vector3.new(0,0,0)
-        if controls then
-            local mv = controls:GetMoveVector()
-            moveVec = cam.CFrame:VectorToWorldSpace(Vector3.new(mv.X, 0, mv.Z))
-        end
-
-        if moveVec.Magnitude > 0 then
-            moveVec = moveVec.Unit * FlySpeed
-        else
-            moveVec = Vector3.new(0,0,0)
-        end
-
-        local delta = RunService.Heartbeat:Wait()
-        local newPos = hrp.Position + moveVec * delta
-
-        -- 锁定人物：只允许Y轴转向，俯仰/翻滚全部锁死，人物保持立正
-        hrp.CFrame = CFrame.new(newPos) * CFrame.Angles(0, cam.CFrame.Y, 0)
-    end
-end
-
 function startFly()
     if flyState.enabled then return end
     local char = lp.Character
     if not char then return end
     local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChildOfClass("Humanoid")
-    if not hrp or not hum then return end
+    if not hrp then return end
+
     flyState.enabled = true
-    flyState.flyLoopThread = task.spawn(flyLoop)
+    flyState.hrp = hrp
+
+    -- 创建浮空物理组件
+    local bp = Instance.new("BodyPosition")
+    bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+    bp.D = 400
+    bp.Position = hrp.Position
+    bp.Parent = hrp
+
+    local bg = Instance.new("BodyGyro")
+    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+    bg.D = 400
+    bg.CFrame = hrp.CFrame
+    bg.Parent = hrp
+
+    flyState.bp = bp
+    flyState.bg = bg
+
+    -- 每帧更新目标位置
+    flyState.conn = RunService.RenderStepped:Connect(function()
+        if not flyState.enabled then return end
+        local cam = workspace.CurrentCamera
+        local mv = controls:GetMoveVector()
+
+        -- 镜头朝向作为飞行方向
+        local dir = cam.CFrame:VectorToWorldSpace(Vector3.new(mv.X, 0, mv.Z))
+        if dir.Magnitude > 0.01 then
+            dir = dir.Unit * FlySpeed
+        else
+            dir = Vector3.new(0,0,0)
+        end
+
+        local targetPos = hrp.Position + dir * 0.016
+        bp.Position = targetPos
+        -- 只跟随镜头水平旋转，身体永远立正
+        bg.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, cam.CFrame.Y, 0)
+    end)
 end
 
 function stopFly()
     flyState.enabled = false
-    if flyState.flyLoopThread then
-        task.cancel(flyState.flyLoopThread)
-        flyState.flyLoopThread = nil
+    if flyState.conn then
+        flyState.conn:Disconnect()
+        flyState.conn = nil
     end
-    if flyState.hum then
-        flyState.hum.PlatformStand = false
-        flyState.hum.GravityScale = 1 -- 关闭飞行恢复重力
-        flyState.hum:SetStateEnabled(Enum.HumanoidStateType.Ragdoll, true)
+    if flyState.bp then
+        flyState.bp:Destroy()
+        flyState.bp = nil
     end
+    if flyState.bg then
+        flyState.bg:Destroy()
+        flyState.bg = nil
+    end
+    flyState.hrp = nil
 end
 
 lp.CharacterAdded:Connect(function()

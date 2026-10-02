@@ -91,111 +91,131 @@ local PYHubEntry = function(loaderUrl, nodeUrl, scriptId, scriptVersion, _unused
 
 	end
 
-	local localPlayer = game:GetService("Players").LocalPlayer
-	local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local lp = Players.LocalPlayer
 
 local FlySpeed = 35
 local flyState = {
-	enabled = false,
-	hrp = nil,
-	hum = nil,
-	microThread = nil,
-	healthThread = nil,
-	diedConn = nil,
-	targetPos = nil,
-	lastTime = 0
+    enabled = false,
+    hrp = nil,
+    hum = nil,
+    flyLoopThread = nil
 }
-local flyAnchor = {
-	W = false,
-	S = false,
-	A = false,
-	D = false,
-	Space = false,
-	LeftControl = false
-}
+local uiUpBtn, uiDownBtn
+local verticalInput = 0
+local controls = nil
 
-local function flyRefreshParts()
-	local char = localPlayer.Character
-	if not char then return end
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	local hum = char:FindFirstChild("Humanoid")
-	if hrp and hum then
-		flyState.hrp = hrp
-		flyState.hum = hum
-	end
+task.spawn(function()
+    pcall(function()
+        local pm = lp.PlayerScripts:WaitForChild("PlayerModule",10)
+        controls = require(pm):GetControls()
+    end)
+end)
+
+local function createFlyUi()
+    local hui
+    pcall(function() hui = gethui() end)
+    if not hui then hui = lp:WaitForChild("PlayerGui") end
+    local sg = Instance.new("ScreenGui")
+    sg.Name = "FlyMobileUI"
+    sg.ResetOnSpawn = false
+    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    sg.Parent = hui
+
+    local function makeBtn(name,posY,callback)
+        local btn = Instance.new("TextButton")
+        btn.Name = name
+        btn.Size = UDim2.new(0,70,0,70)
+        btn.Position = UDim2.new(0.88,0,posY,0)
+        btn.BackgroundColor3 = Color3.new(0.15,0.6,0.9)
+        btn.TextColor3 = Color3.new(1,1,1)
+        btn.Font = Enum.Font.GothamBold
+        btn.TextSize = 18
+        btn.Parent = sg
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0,12)
+        corner.Parent = btn
+
+        btn.TouchStarted:Connect(function() callback(1) end)
+        btn.TouchEnded:Connect(function() callback(0) end)
+        return btn
+    end
+
+    uiUpBtn = makeBtn("FlyUpBtn",0.20,function(val) verticalInput = val end)
+    uiUpBtn.Text = "上升"
+    uiDownBtn = makeBtn("FlyDownBtn",0.32,function(val) verticalInput = -val end)
+    uiDownBtn.Text = "下降"
+
+    uiUpBtn.Visible = false
+    uiDownBtn.Visible = false
+    return sg
 end
-
-UserInputService.InputBegan:Connect(function(input, gp)
-	if gp then return end
-	local key = input.KeyCode
-	if key == Enum.KeyCode.W then flyAnchor.W = true end
-	if key == Enum.KeyCode.S then flyAnchor.S = true end
-	if key == Enum.KeyCode.A then flyAnchor.A = true end
-	if key == Enum.KeyCode.D then flyAnchor.D = true end
-	if key == Enum.KeyCode.Space then flyAnchor.Space = true end
-	if key == Enum.KeyCode.LeftControl then flyAnchor.LeftControl = true end
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-	local key = input.KeyCode
-	if key == Enum.KeyCode.W then flyAnchor.W = false end
-	if key == Enum.KeyCode.S then flyAnchor.S = false end
-	if key == Enum.KeyCode.A then flyAnchor.A = false end
-	if key == Enum.KeyCode.D then flyAnchor.D = false end
-	if key == Enum.KeyCode.Space then flyAnchor.Space = false end
-	if key == Enum.KeyCode.LeftControl then flyAnchor.LeftControl = false end
-end)
+local flyGui = createFlyUi()
 
 local function flyLoop()
-	while flyState.enabled do
-		flyRefreshParts()
-		if not flyState.hrp or not flyState.hum then
-			task.wait(0.1)
-			continue
-		end
-		flyState.hum.PlatformStand = true
-		local camCF = workspace.CurrentCamera.CFrame
-		local moveDir = Vector3.new(0,0,0)
-		if flyAnchor.W then moveDir += camCF.LookVector end
-		if flyAnchor.S then moveDir -= camCF.LookVector end
-		if flyAnchor.A then moveDir -= camCF.RightVector end
-		if flyAnchor.D then moveDir += camCF.RightVector end
-		if flyAnchor.Space then moveDir += Vector3.new(0,1,0) end
-		if flyAnchor.LeftControl then moveDir -= Vector3.new(0,1,0) end
-		moveDir = moveDir.Unit
-		flyState.hrp.Velocity = moveDir * FlySpeed
-		task.wait(0.001)
-	end
-end
+    while flyState.enabled do
+        local char = lp.Character
+        if not char then task.wait(0.1) continue end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum then task.wait(0.1) continue end
 
-local function flyHealthLockLoop()
-	while flyState.enabled do
-		if flyState.hum and flyState.hum.Health <= 0 then
-			flyState.hum.Health = flyState.hum.MaxHealth
-		end
-		task.wait(0.1)
-	end
+        flyState.hrp = hrp
+        flyState.hum = hum
+        hum.PlatformStand = true
+
+        local cam = workspace.CurrentCamera
+        local moveVec = Vector3.new(0,0,0)
+        if controls then
+            local mv = controls:GetMoveVector()
+            moveVec = cam.CFrame:VectorToWorldSpace(Vector3.new(mv.X, 0, mv.Z))
+            moveVec = Vector3.new(moveVec.X,0,moveVec.Z).Unit
+        end
+        moveVec += Vector3.new(0, verticalInput, 0)
+        if moveVec.Magnitude>0 then
+            moveVec = moveVec.Unit
+        end
+        hrp.Velocity = moveVec * FlySpeed
+        task.wait(0.001)
+    end
 end
 
 function startFly()
-	if flyState.enabled then return end
-	flyRefreshParts()
-	if not flyState.hrp or not flyState.hum then return end
-	flyState.enabled = true
-	flyState.microThread = task.spawn(flyLoop)
-	flyState.healthThread = task.spawn(flyHealthLockLoop)
+    if flyState.enabled then return end
+    local char = lp.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+
+    flyState.enabled = true
+    uiUpBtn.Visible = true
+    uiDownBtn.Visible = true
+    flyState.flyLoopThread = task.spawn(flyLoop)
 end
 
 function stopFly()
-	flyState.enabled = false
-	if flyState.microThread then task.cancel(flyState.microThread) end
-	if flyState.healthThread then task.cancel(flyState.healthThread) end
-	if flyState.hum then flyState.hum.PlatformStand = false end
-	flyState.hrp = nil
-	flyState.hum = nil
+    flyState.enabled = false
+    if flyState.flyLoopThread then
+        task.cancel(flyState.flyLoopThread)
+        flyState.flyLoopThread = nil
+    end
+    if flyState.hum then
+        flyState.hum.PlatformStand = false
+    end
+    uiUpBtn.Visible = false
+    uiDownBtn.Visible = false
+    verticalInput = 0
 end
+
+lp.CharacterAdded:Connect(function()
+    if flyState.enabled then
+        stopFly()
+        task.wait(0.3)
+        startFly()
+    end
+end)
 	local concat = table.concat
 	local sub = string.sub
 	local byte = string.byte

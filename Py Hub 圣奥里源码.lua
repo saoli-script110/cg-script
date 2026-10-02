@@ -91,98 +91,7 @@ local PYHubEntry = function(loaderUrl, nodeUrl, scriptId, scriptVersion, _unused
 
 	end
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local lp = Players.LocalPlayer
 
-local FlySpeed = 35
-local flyState = {
-    enabled = false,
-    hrp = nil,
-    bp = nil,
-    bg = nil,
-    conn = nil
-}
-local controls = nil
-
-task.spawn(function()
-    pcall(function()
-        local pm = lp.PlayerScripts:WaitForChild("PlayerModule",10)
-        controls = require(pm):GetControls()
-    end)
-end)
-
-function startFly()
-    if flyState.enabled then return end
-    local char = lp.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    if not hrp then return end
-
-    flyState.enabled = true
-    flyState.hrp = hrp
-
-    -- 创建浮空物理组件
-    local bp = Instance.new("BodyPosition")
-    bp.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-    bp.D = 400
-    bp.Position = hrp.Position
-    bp.Parent = hrp
-
-    local bg = Instance.new("BodyGyro")
-    bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
-    bg.D = 400
-    bg.CFrame = hrp.CFrame
-    bg.Parent = hrp
-
-    flyState.bp = bp
-    flyState.bg = bg
-
-    -- 每帧更新目标位置
-    flyState.conn = RunService.RenderStepped:Connect(function()
-        if not flyState.enabled then return end
-        local cam = workspace.CurrentCamera
-        local mv = controls:GetMoveVector()
-
-        -- 镜头朝向作为飞行方向
-        local dir = cam.CFrame:VectorToWorldSpace(Vector3.new(mv.X, 0, mv.Z))
-        if dir.Magnitude > 0.01 then
-            dir = dir.Unit * FlySpeed
-        else
-            dir = Vector3.new(0,0,0)
-        end
-
-        local targetPos = hrp.Position + dir * 0.016
-        bp.Position = targetPos
-        -- 只跟随镜头水平旋转，身体永远立正
-        bg.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, cam.CFrame.Y, 0)
-    end)
-end
-
-function stopFly()
-    flyState.enabled = false
-    if flyState.conn then
-        flyState.conn:Disconnect()
-        flyState.conn = nil
-    end
-    if flyState.bp then
-        flyState.bp:Destroy()
-        flyState.bp = nil
-    end
-    if flyState.bg then
-        flyState.bg:Destroy()
-        flyState.bg = nil
-    end
-    flyState.hrp = nil
-end
-
-lp.CharacterAdded:Connect(function()
-    if flyState.enabled then
-        stopFly()
-        task.wait(0.3)
-        startFly()
-    end
-end)
 	local concat = table.concat
 	local sub = string.sub
 	local byte = string.byte
@@ -3063,7 +2972,7 @@ end)
 
 	local v36 = v27:Tab({ Title = "公告", Icon = "message-circle", Locked = false })
 	v36:Paragraph({ Title = "破解版", Desc = "XI团队暴打所有联邦狗", Image = "message-circle", ImageSize = 32 })
-	v36:Paragraph({ Title = "开源人", Desc = "苏达", Image = "user", ImageSize = 32 })
+	v36:Paragraph({ Title = "开源人", Desc = "巴黎", Image = "user", ImageSize = 32 })
 	local v37 = v27:Tab({ Title = "主页", Icon = "home", Locked = false })
 	v37:Paragraph({ Title = "PY Hub", Desc = "圣奥里精简版", Image = "zap", ImageSize = 32 })
 	v37:Paragraph({ Title = "玩家", Desc = "当前服务器ID: " .. game.PlaceId, Image = "users", ImageSize = 32 })
@@ -3841,7 +3750,7 @@ end)
 	end,
 	})
 	v46:Toggle({
-    Title = "✅开启飞天",
+    Title = "开启飞天（暂时用不了）",
     Default = false,
     Callback = function(state)
         if state then

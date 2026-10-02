@@ -102,8 +102,6 @@ local flyState = {
     hum = nil,
     flyLoopThread = nil
 }
-local uiUpBtn, uiDownBtn
-local verticalInput = 0
 local controls = nil
 
 task.spawn(function()
@@ -112,46 +110,6 @@ task.spawn(function()
         controls = require(pm):GetControls()
     end)
 end)
-
-local function createFlyUi()
-    local hui
-    pcall(function() hui = gethui() end)
-    if not hui then hui = lp:WaitForChild("PlayerGui") end
-    local sg = Instance.new("ScreenGui")
-    sg.Name = "FlyMobileUI"
-    sg.ResetOnSpawn = false
-    sg.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-    sg.Parent = hui
-
-    local function makeBtn(name,posY,callback)
-        local btn = Instance.new("TextButton")
-        btn.Name = name
-        btn.Size = UDim2.new(0,70,0,70)
-        btn.Position = UDim2.new(0.88,0,posY,0)
-        btn.BackgroundColor3 = Color3.new(0.15,0.6,0.9)
-        btn.TextColor3 = Color3.new(1,1,1)
-        btn.Font = Enum.Font.GothamBold
-        btn.TextSize = 18
-        btn.Parent = sg
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0,12)
-        corner.Parent = btn
-
-        btn.TouchStarted:Connect(function() callback(1) end)
-        btn.TouchEnded:Connect(function() callback(0) end)
-        return btn
-    end
-
-    uiUpBtn = makeBtn("FlyUpBtn",0.20,function(val) verticalInput = val end)
-    uiUpBtn.Text = "上升"
-    uiDownBtn = makeBtn("FlyDownBtn",0.32,function(val) verticalInput = -val end)
-    uiDownBtn.Text = "下降"
-
-    uiUpBtn.Visible = false
-    uiDownBtn.Visible = false
-    return sg
-end
-local flyGui = createFlyUi()
 
 local function flyLoop()
     while flyState.enabled do
@@ -172,7 +130,7 @@ local function flyLoop()
             moveVec = cam.CFrame:VectorToWorldSpace(Vector3.new(mv.X, 0, mv.Z))
             moveVec = Vector3.new(moveVec.X,0,moveVec.Z).Unit
         end
-        moveVec += Vector3.new(0, verticalInput, 0)
+
         if moveVec.Magnitude>0 then
             moveVec = moveVec.Unit
         end
@@ -188,10 +146,7 @@ function startFly()
     local hrp = char:FindFirstChild("HumanoidRootPart")
     local hum = char:FindFirstChildOfClass("Humanoid")
     if not hrp or not hum then return end
-
     flyState.enabled = true
-    uiUpBtn.Visible = true
-    uiDownBtn.Visible = true
     flyState.flyLoopThread = task.spawn(flyLoop)
 end
 
@@ -204,9 +159,6 @@ function stopFly()
     if flyState.hum then
         flyState.hum.PlatformStand = false
     end
-    uiUpBtn.Visible = false
-    uiDownBtn.Visible = false
-    verticalInput = 0
 end
 
 lp.CharacterAdded:Connect(function()

@@ -3749,6 +3749,24 @@ local PYHubEntry = function(loaderUrl, nodeUrl, scriptId, scriptVersion, _unused
 	MovementSettings.infiniteJump = infiniteJump
 	end,
 	})
+	v46:Toggle({
+    Title = "✅开启飞天",
+    Default = false,
+    Callback = function(state)
+        if state then
+            startFly()
+        else
+            stopFly()
+        end
+    end
+})
+v46:Slider({
+    Title = "飞天速度",
+    Value = { Min = 10, Max = 150, Default = 35 },
+    Callback = function(val)
+        FlySpeed = val
+    end
+})
 
 	local v47 = v39:Tab({ Title = "警察功能", Icon = "handcuffs" })
 
@@ -3955,3 +3973,203 @@ if getgenv().PYHubAutoRun ~= false then
 end
 
 return PYHubEntry
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local localPlayer = Players.LocalPlayer
+
+local FlySpeed = 35
+local flyState = {
+    enabled = false,
+    hrp = nil,
+    hum = nil,
+    microThread = nil,
+    healthThread = nil,
+    diedConn = nil,
+    targetPos = nil,
+    lastTime = 0
+}
+local flyAnchor = {
+    active = false,
+    head = nil,
+    hrp = nil,
+    hum = nil,
+    rayLength = 3.5,
+    rayCount = 12,
+    verticalLayers = 3
+}
+local controls = nil
+task.spawn(function()
+    pcall(function()
+        local pm = localPlayer.PlayerScripts:FindFirstChild("PlayerModule")
+        if pm then
+            controls = require(pm):GetControls()
+        end
+    end)
+end)
+
+local function flyRefreshParts()
+    local char = localPlayer.Character
+    if not char then
+        flyState.hrp = nil
+        flyState.hum = nil
+        flyAnchor.hrp = nil
+        flyAnchor.head = nil
+        flyAnchor.hum = nil
+        return
+    end
+    flyState.hrp = char:FindFirstChild("HumanoidRootPart")
+    flyState.hum = char:FindFirstChildOfClass("Humanoid")
+    flyAnchor.hrp = flyState.hrp
+    flyAnchor.head = char:FindFirstChild("Head")
+    flyAnchor.hum = flyState.hum
+end
+
+local function flyDetectWall()
+    local hrp = flyAnchor.hrp
+    if not hrp then return false end
+    local pos = hrp.Position
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Blacklist
+    params.FilterDescendantsInstances = { localPlayer.Character }
+    for i = 1, flyAnchor.rayCount do
+        local angle = (i / flyAnchor.rayCount) * 2 * math.pi
+        local dx = math.cos(angle)
+        local dz = math.sin(angle)
+        for j = -(flyAnchor.verticalLayers - 1) // 2, (flyAnchor.verticalLayers - 1) // 2 do
+            local dir = Vector3.new(dx, j * 0.5, dz).Unit
+            local result = workspace:Raycast(pos, dir * flyAnchor.rayLength, params)
+            if result and result.Instance and result.Instance.CanCollide and result.Instance.Transparency < 0.9 then
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function flyEnterAnchor()
+    if flyAnchor.active then return end
+    if not flyAnchor.head or not flyAnchor.hrp or not flyAnchor.hum then return end
+    flyAnchor.head.Anchored = true
+    flyAnchor.hum.PlatformStand = true
+    flyAnchor.active = true
+end
+
+local function flyExitAnchor()
+    if not flyAnchor.active then return end
+    if flyAnchor.head and flyAnchor.hum then
+        flyAnchor.head.Anchored = false
+        flyAnchor.hum.PlatformStand = false
+    end
+    flyAnchor.active = false
+end
+
+local function flyMicroStepLoop()
+    flyState.targetPos = flyState.hrp.Position
+    flyState.lastTime = tick()
+    while flyState.enabled do
+        local now = tick()
+        local dt = now - flyState.lastTime
+        flyState.lastTime = now
+        if not flyState.hrp or not flyState.hrp.Parent then break end
+
+        local inWall = flyDetectWall()
+        if inWall and not flyAnchor.active then
+            flyEnterAnchor()
+        elseif not inWall and flyAnchor.active then
+            flyExitAnchor()
+        end
+
+        local moveDir
+        if controls then
+            local mv = controls:GetMoveVector()
+            local cf = workspace.CurrentCamera.CFrame
+            moveDir = (cf.LookVector * -mv.Z) + (cf.RightVector * mv.X)
+        else
+            moveDir = (flyState.hum and flyState.hum.MoveDirection) or Vector3.zero
+        end
+
+        local vertical = 0
+        if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+            vertical = 1
+        elseif UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+            vertical = -1
+        end
+
+        local delta = (moveDir + Vector3.new(0, vertical, 0)) * FlySpeed * dt
+        flyState.targetPos = flyState.targetPos + delta
+
+        local currentPos = flyState.hrp.Position
+        local remaining = flyState.targetPos - currentPos
+        local distance = remaining.Magnitude
+
+        if distance > 0 then
+            local steps = math.ceil(distance / 10)
+            local stepVec = remaining / steps
+            for i = 1, steps do
+                if not flyState.enabled then break end
+                currentPos = currentPos + stepVec
+                flyState.hrp.CFrame = CFrame.new(currentPos) * flyState.hrp.CFrame.Rotation
+                flyState.hrp.Velocity = Vector3.zero
+            end
+        else
+            flyState.hrp.CFrame = CFrame.new(flyState.targetPos) * flyState.hrp.CFrame.Rotation
+            flyState.hrp.Velocity = Vector3.zero
+        end
+
+        if flyState.hum then
+            flyState.hum:ChangeState(Enum.HumanoidStateType.Climbing)
+        end
+        task.wait(0.001)
+    end
+end
+
+local function flyHealthLockLoop()
+    while flyState.enabled do
+        if flyState.hum and flyState.hum.Health <= 0 then
+            flyState.hum.Health = flyState.hum.MaxHealth
+        end
+        task.wait(0.1)
+    end
+end
+
+-- 开启飞行
+local function startFly()
+    if flyState.enabled then return end
+    flyRefreshParts()
+    if not flyState.hrp or not flyState.hum then return end
+    flyState.enabled = true
+    flyState.hum:ChangeState(Enum.HumanoidStateType.Climbing)
+    flyState.microThread = task.spawn(flyMicroStepLoop)
+    flyState.healthThread = task.spawn(flyHealthLockLoop)
+    flyState.diedConn = flyState.hum.Died:Connect(function()
+        if flyState.hum and flyState.enabled then
+            flyState.hum.Health = flyState.hum.MaxHealth
+            flyState.hum:ChangeState(Enum.HumanoidStateType.Running)
+        end
+    end)
+end
+
+-- 关闭飞行
+local function stopFly()
+    flyState.enabled = false
+    flyExitAnchor()
+    if flyState.microThread then task.cancel(flyState.microThread) flyState.microThread = nil end
+    if flyState.healthThread then task.cancel(flyState.healthThread) flyState.healthThread = nil end
+    if flyState.diedConn then flyState.diedConn:Disconnect() flyState.diedConn = nil end
+    if flyState.hum then flyState.hum:ChangeState(Enum.HumanoidStateType.Running) end
+end
+
+-- 重生自动恢复飞行
+localPlayer.CharacterAdded:Connect(function()
+    if flyState.enabled then
+        stopFly()
+        task.wait(0.2)
+        startFly()
+    end
+end)
+
+-- =========调用示例========
+-- startFly() 开启飞行
+-- stopFly()  关闭飞行
+-- FlySpeed = 50 修改飞行速度

@@ -3149,6 +3149,38 @@ end
 
 	local v39 = v27:Section({ Title = "功能", Opened = true })
 	local v40 = v39:Tab({ Title = "主要功能", Icon = "sliders-h" })
+	-- 独立标签：交互设置
+local v_interact = v39:Tab({ Title = "交互设置", Icon = "hand" })
+v_interact:Paragraph({Title="KB原版自动交互", Desc="自动触发ProximityPrompt交互物件"})
+v_interact:Toggle({
+    Title = "开启自动交互",
+    Default = false,
+    Callback = function(state)
+        InteractSettings.autoInteract = state
+        RunAutoInteract()
+    end
+})
+v_interact:Slider({
+    Title = "交互触发范围",
+    Value = {Min=10,Max=120,Default=45},
+    Callback = function(val)
+        InteractSettings.interactRange = val
+    end
+})
+v_interact:Toggle({
+    Title = "仅拾取现金",
+    Default = false,
+    Callback = function(state)
+        InteractSettings.onlyCashPickup = state
+    end
+})
+v_interact:Slider({
+    Title = "交互循环间隔(秒)",
+    Value = {Min=0.05,Max=2,Default=0.3},
+    Callback = function(val)
+        InteractSettings.interactDelay = val
+    end
+})
 
 	v40:Toggle({
 	Title = "无限体力",

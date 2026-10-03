@@ -2590,6 +2590,56 @@ local function DoTeleportByIndex(idx)
     fn72(data.p)
 end
 -- ==========传送模块底层结束==========
+-- ==========【PY原版自动交互底层 完整】==========
+local InteractSettings = {
+    autoInteract = false,
+    interactRange = 45,
+    onlyCashPickup = false,
+    interactDelay = 0.3
+}
+
+local InteractLoopThread = nil
+
+local function RunAutoInteract()
+    if InteractLoopThread then
+        task.cancel(InteractLoopThread)
+        InteractLoopThread = nil
+    end
+    InteractLoopThread = task.spawn(function()
+        while InteractSettings.autoInteract do
+            local _, _, rootPart = fn40(localPlayer3)
+            if rootPart then
+                local targetPrompt = nil
+                local minDis = math.huge
+                for _,desc in ipairs(Workspace:GetDescendants()) do
+                    if desc:IsA("ProximityPrompt") then
+                        if InteractSettings.onlyCashPickup then
+                            local actText = string.lower(desc.ActionText or "")
+                            local objText = string.lower(desc.ObjectText or "")
+                            if not (actText:find("cash") or actText:find("money") or objText:find("cash") or objText:find("money")) then
+                                continue
+                            end
+                        end
+                        local pos = fn70(desc)
+                        if pos then
+                            local dist = (rootPart.Position - pos).Magnitude
+                            if dist < InteractSettings.interactRange and dist < minDis then
+                                minDis = dist
+                                targetPrompt = desc
+                            end
+                        end
+                    end
+                end
+                if targetPrompt then
+                    fn71(targetPrompt)
+                end
+            end
+            task.wait(InteractSettings.interactDelay)
+        end
+    end)
+end
+-- ==========【PY原版自动交互底层结束】==========
+
 
 	FlyState = {
 	walkConn = nil,

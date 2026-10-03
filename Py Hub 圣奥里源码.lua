@@ -2616,7 +2616,8 @@ local function RunAutoInteract()
                 local targetPrompt = nil
                 local minDis = math.huge
                 -- ⭐重点：不再扫描整张地图！只扫描角色附近物件，大幅减少卡顿
-                for _,desc in ipairs(rootPart:GetParent():GetDescendants()) do
+                for _,desc in ipairs(workspace:GetDescendants()) do
+
                     if desc:IsA("ProximityPrompt") then
                         local pos = fn70(desc)
                         if pos then
@@ -3209,6 +3210,33 @@ end
 	-- 独立标签：交互设置
 local v_interact = v39:Tab({ Title = "交互设置", Icon = "hand" })
 v_interact:Paragraph({Title="KB原版自动交互", Desc="自动触发ProximityPrompt交互物件"})
+v_interact:Slider({
+    Title = "交互范围",
+    Min = 10,
+    Max = 80,
+    Default = 45,
+    Callback = function(val)
+        InteractSettings.interactRange = val
+    end
+})
+
+v_interact:Slider({
+    Title = "扫描间隔",
+    Min = 0.1,
+    Max = 1,
+    Default = 0.3,
+    Callback = function(val)
+        InteractSettings.interactDelay = val
+    end
+})
+
+v_interact:Toggle({
+    Title = "只拾取现金",
+    Default = false,
+    Callback = function(state)
+        InteractSettings.onlyCashPickup = state
+    end
+})
 v_interact:Toggle({
     Title = "开启自动交互",
     Default = false,

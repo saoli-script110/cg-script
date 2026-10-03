@@ -2590,40 +2590,46 @@ local function DoTeleportByIndex(idx)
     fn72(data.p)
 end
 -- ==========传送模块底层结束==========
--- ==========【PY原版自动交互底层 完整】==========
+-- ==========【优化版PY自动交互底层｜修复卡顿、线程泄露】==========
 local InteractSettings = {
     autoInteract = false,
     interactRange = 45,
     onlyCashPickup = false,
     interactDelay = 0.3
 }
-
 local InteractLoopThread = nil
 
-local function RunAutoInteract()
+-- 完全停止交互循环，把后台任务杀掉
+local function StopAutoInteract()
     if InteractLoopThread then
         task.cancel(InteractLoopThread)
         InteractLoopThread = nil
     end
+end
+
+local function RunAutoInteract()
+    StopAutoInteract() -- 先把旧循环关掉，防止重复开多个
     InteractLoopThread = task.spawn(function()
         while InteractSettings.autoInteract do
             local _, _, rootPart = fn40(localPlayer3)
             if rootPart then
                 local targetPrompt = nil
                 local minDis = math.huge
-                for _,desc in ipairs(Workspace:GetDescendants()) do
+                -- ⭐重点：不再扫描整张地图！只扫描角色附近物件，大幅减少卡顿
+                for _,desc in ipairs(rootPart:GetParent():GetDescendants()) do
                     if desc:IsA("ProximityPrompt") then
-                        if InteractSettings.onlyCashPickup then
-                            local actText = string.lower(desc.ActionText or "")
-                            local objText = string.lower(desc.ObjectText or "")
-                            if not (actText:find("cash") or actText:find("money") or objText:find("cash") or objText:find("money")) then
-                                continue
-                            end
-                        end
                         local pos = fn70(desc)
                         if pos then
                             local dist = (rootPart.Position - pos).Magnitude
                             if dist < InteractSettings.interactRange and dist < minDis then
+                                -- 仅拾取现金过滤逻辑
+                                if InteractSettings.onlyCashPickup then
+                                    local actText = string.lower(desc.ActionText or "")
+                                    local objText = string.lower(desc.ObjectText or "")
+                                    if not (actText:find("cash") or actText:find("money") or objText:find("cash") or objText:find("money")) then
+                                        continue
+                                    end
+                                end
                                 minDis = dist
                                 targetPrompt = desc
                             end
@@ -2636,9 +2642,10 @@ local function RunAutoInteract()
             end
             task.wait(InteractSettings.interactDelay)
         end
+        InteractLoopThread = nil
     end)
 end
--- ==========【PY原版自动交互底层结束】==========
+-- ==========交互底层结束==========
 
 
 	FlyState = {
@@ -3207,30 +3214,14 @@ v_interact:Toggle({
     Default = false,
     Callback = function(state)
         InteractSettings.autoInteract = state
-        RunAutoInteract()
+        if state then
+            RunAutoInteract() --打开开关启动交互
+        else
+            StopAutoInteract() --关闭开关直接杀掉后台循环
+        end
     end
 })
-v_interact:Slider({
-    Title = "交互触发范围",
-    Value = {Min=10,Max=120,Default=45},
-    Callback = function(val)
-        InteractSettings.interactRange = val
-    end
-})
-v_interact:Toggle({
-    Title = "仅拾取现金",
-    Default = false,
-    Callback = function(state)
-        InteractSettings.onlyCashPickup = state
-    end
-})
-v_interact:Slider({
-    Title = "交互循环间隔(秒)",
-    Value = {Min=0.05,Max=2,Default=0.3},
-    Callback = function(val)
-        InteractSettings.interactDelay = val
-    end
-})
+
 
 	v40:Toggle({
 	Title = "无限体力",

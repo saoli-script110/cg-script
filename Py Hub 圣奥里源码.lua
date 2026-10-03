@@ -2546,6 +2546,50 @@ local PYHubEntry = function(loaderUrl, nodeUrl, scriptId, scriptVersion, _unused
 	flyMode = "传送",
 	noclip = false,
 	}
+	-- ==========【新增传送模块 底层】==========
+local TeleportSettings = {
+    teleportToggle = false,
+    selectedIndex = 1
+}
+
+-- 圣奥里全部传送点位
+local FIXED_TELEPORTS = {
+    {n = "车辆经销商", p = Vector3.new(3719.9501953125, 3.018573522567749, -333.3118591308594), region = "圣奥里"},
+    {n = "医院", p = Vector3.new(3980.091064453125, 2.876060724258423, -138.79454040527344), region = "圣奥里"},
+    {n = "警察局", p = Vector3.new(3364.273193359375, 3.9188079834, -394.7233581542969), region = "圣奥里"},
+    {n = "圣奥里修车店", p = Vector3.new(2782.46875, 2.630995750427246, -418.59930419921875), region = "圣奥里"},
+    {n = "圣奥里银行", p = Vector3.new(3134.05419921875, 6.116048336029053, -171.36976623535156), region = "圣奥里"},
+    {n = "圣奥里服装店", p = Vector3.new(3617.91259765625, 3.1072206497192383, -452.8206481933594), region = "圣奥里"},
+    {n = "圣奥里平民重生", p = Vector3.new(3741.114990234375, 3.720573663711548, -438.1059875488281), region = "圣奥里"},
+    {n = "圣奥里码头", p = Vector3.new(4527.65625, -23.968238830566406, -280.59356689453125), region = "圣奥里"},
+    {n = "圣奥里餐饮店", p = Vector3.new(3182.416748046875, 3.01859188079834, 426.5179138183594), region = "圣奥里"},
+    {n = "消防部门", p = Vector3.new(3578.676025390625, 8.408823013305664, 579.6567993164062), region = "圣奥里"},
+    {n = "宠物店", p = Vector3.new(3678.237305, 3.017920, 693.114624), region = "圣奥里"},
+    {n = "圣奥里大码头", p = Vector3.new(2736.307617, 2.630299, -1120.333008), region = "圣奥里"},
+    {n = "圣奥里海滩桥下(消星点)", p = Vector3.new(3964.504395, -25.068211, -854.057251), region = "圣奥里"},
+    {n = "大景超市", p = Vector3.new(3936.582764, 3.038293, 1136.326416), region = "大景"},
+    {n = "转镜中心", p = Vector3.new(4152.919922, 2.631675, 941.446045), region = "大景"},
+    {n = "道路服务", p = Vector3.new(4271.332520, 2.628108, 1200.086914), region = "大景"},
+    {n = "大景餐饮店", p = Vector3.new(4476.997559, 3.037825, 906.802979), region = "大景"},
+    {n = "送货中心", p = Vector3.new(4399.419434, 3.038999, 1609.455933), region = "大景"},
+    {n = "大景卖车店", p = Vector3.new(3434.377441, 42.931786, 2687.997070), region = "大景"},
+}
+-- 提取点位名字给下拉菜单
+local TeleportNameList = {}
+for _,v in ipairs(FIXED_TELEPORTS) do
+    table.insert(TeleportNameList, v.n)
+end
+
+-- 使用脚本自带fn72传送函数（游戏原生PivotTo，防止被回滚）
+local function DoTeleportByIndex(idx)
+    if not TeleportSettings.teleportToggle then
+        return
+    end
+    local data = FIXED_TELEPORTS[idx]
+    if not data then return end
+    fn72(data.p)
+end
+-- ==========传送模块底层结束==========
 
 	FlyState = {
 	walkConn = nil,
@@ -3195,6 +3239,35 @@ local PYHubEntry = function(loaderUrl, nodeUrl, scriptId, scriptVersion, _unused
 	end
 	end,
 	})
+	v40:Divider()
+v40:Paragraph({Title="点位传送模块", Desc="开启开关后选择地点再点执行传送"})
+v40:Toggle({
+    Title = "启用点位传送",
+    Default = false,
+    Callback = function(state)
+        TeleportSettings.teleportToggle = state
+    end
+})
+v40:Dropdown({
+    Title = "传送目标地点",
+    Values = TeleportNameList,
+    Value = TeleportNameList[1],
+    Callback = function(selectedName)
+        for i,data in ipairs(FIXED_TELEPORTS) do
+            if data.n == selectedName then
+                TeleportSettings.selectedIndex = i
+                break
+            end
+        end
+    end
+})
+v40:Button({
+    Title = "执行传送",
+    Icon = "arrow-right",
+    Callback = function()
+        DoTeleportByIndex(TeleportSettings.selectedIndex)
+    end
+})
 
 	local v41 = v39:Tab({ Title = "刷钱", Icon = "money-bill-wave" })
 

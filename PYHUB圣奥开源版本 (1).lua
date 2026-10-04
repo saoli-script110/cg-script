@@ -3122,6 +3122,118 @@ local function createMainWindow()
 			PlayerConfig.infiniteJump = v
 		end
 	})
+	PlayerTab:Divider()
+
+PlayerTab:Toggle({
+	Title = "人物飞天",
+	Default = false,
+	Callback = function(v)
+		if v then
+			startPlayerFly()
+		else
+			stopPlayerFly()
+		end
+	end
+})
+
+PlayerTab:Dropdown({
+	Title = "飞天模式",
+	Values = {"传送", "物理"},
+	Value = "传送",
+	Callback = function(v)
+		PlayerConfig.flyMode = v
+		if PlayerConfig.flyEnabled then
+			stopPlayerFly()
+			task.wait(0.1)
+			startPlayerFly()
+		end
+	end
+})
+
+PlayerTab:Slider({
+	Title = "飞天速度",
+	Value = {
+		Min = 10,
+		Max = 120,
+		Default = 30
+	},
+	Callback = function(v)
+		PlayerConfig.flySpeed = v
+	end
+})
+
+PlayerTab:Toggle({
+	Title = "穿墙Noclip",
+	Default = false,
+	Callback = function(v)
+		PlayerConfig.noclip = v
+		if v then
+			startNoclip()
+		else
+			stopNoclip()
+		end
+	end
+})
+
+PlayerTab:Toggle({
+	Title = "显示飞天悬浮小按钮",
+	Default = false,
+	Callback = function(v)
+		playerQuickShown = v
+		if v then
+			createPlayerQuick()
+		else
+			destroyPlayerQuick()
+		end
+	end
+})
+PlayerTab:Divider()
+
+PlayerTab:Toggle({
+	Title = "载具飞车",
+	Default = false,
+	Callback = function(v)
+		if v then
+			startVehicleFly()
+		else
+			stopVehicleFly()
+		end
+	end
+})
+
+PlayerTab:Slider({
+	Title = "载具飞车速度",
+	Value = {
+		Min = 10,
+		Max = 150,
+		Default = 50
+	},
+	Callback = function(v)
+		VehicleFly.speed = v
+	end
+})
+
+
+
+PlayerTab:Toggle({
+	Title = "显示载具飞车悬浮小按钮",
+	Default = false,
+	Callback = function(v)
+		vehicleQuickShown = v
+		if v then
+			createVehicleQuick()
+		else
+			destroyVehicleQuick()
+		end
+	end
+})
+PlayerTab:Toggle({
+	Title = "解除车辆道路限速",
+	Default = false,
+	Callback = function(v)
+		speedLimitEnabled = v
+	end
+})
 	local Police = Section:Tab({
 		Title = "警察功能",
 		Icon = "handcuffs"

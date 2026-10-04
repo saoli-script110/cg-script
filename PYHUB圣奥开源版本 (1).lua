@@ -2538,7 +2538,54 @@ local function createMainWindow()
 	local Section = mainWindow:Section({
 		Title = "功能",
 		Opened = true
-	})
+	})local InteractTab = Section:Tab({
+	Title = "交互设置",
+	Icon = "hand"
+})
+
+InteractTab:Slider({
+	Title = "Prompt按住时长",
+	Desc = "交互弹窗按住时间",
+	Value = { Min = 0, Max = 10, Default = 0 },
+	Callback = function(holdTime)
+		_G.InteractHoldTime = holdTime
+		for _, descendant in ipairs(Workspace:GetDescendants()) do
+			if descendant:IsA("ProximityPrompt") then
+				descendant.HoldDuration = holdTime
+			end
+		end
+	end,
+})
+
+InteractTab:Slider({
+	Title = "Prompt触发距离",
+	Desc = "交互弹窗最大触发距离",
+	Value = { Min = 5, Max = 150, Default = 25 },
+	Callback = function(distance)
+		_G.InteractMaxDist = distance
+		for _, descendant in ipairs(Workspace:GetDescendants()) do
+			if descendant:IsA("ProximityPrompt") then
+				descendant.MaxActivationDistance = distance
+			end
+		end
+	end,
+})
+
+InteractTab:Divider()
+
+InteractTab:Toggle({
+	Title = "启用人物穿墙Noclip",
+	Desc = "无视碰撞穿过物体",
+	Value = false,
+	Callback = function(v)
+		PlayerConfig.noclip = v
+		if v then
+			startNoclip()
+		else
+			stopNoclip()
+		end
+	end
+})
 	local Main = Section:Tab({
 		Title = "主要功能",
 		Icon = "sliders-h"
@@ -3814,4 +3861,16 @@ task.spawn(function()
 	if not okAll then
 		warn("[执行上报] 异常(已忽略，不影响主脚本): " .. tostring(errAll))
 	end
+end)
+Workspace.DescendantAdded:Connect(function(obj)
+	task.spawn(function()
+		if obj:IsA("ProximityPrompt") then
+			if _G.InteractHoldTime then
+				obj.HoldDuration = _G.InteractHoldTime
+			end
+			if _G.InteractMaxDist then
+				obj.MaxActivationDistance = _G.InteractMaxDist
+			end
+		end
+	end)
 end)

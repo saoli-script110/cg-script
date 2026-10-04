@@ -2177,6 +2177,39 @@ local function createVehicleQuick()
 	end)
 end
 local speedLimitEnabled = false
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local playerFunc = ReplicatedStorage:WaitForChild("Remote"):WaitForChild("PlayerFunc")
+
+-- ANSN原版远程购买函数
+BuyItem = function(path, itemName, quantity, isRestaurant)
+	local stuff = ReplicatedStorage:FindFirstChild("Stuff")
+	if not stuff then
+		return false, "未找到Stuff文件夹"
+	end
+	local current = stuff
+	for _, part in ipairs(string.split(path, "/")) do
+		current = current:FindFirstChild(part)
+		if not current then
+			return false, "路径找不到："..part
+		end
+	end
+	local targetItem = current:FindFirstChild(itemName)
+	if not targetItem then
+		return false, "物品不存在："..itemName
+	end
+	local ok, resp = pcall(function()
+		return playerFunc:InvokeServer("purchase", {
+			isRestaurant = isRestaurant,
+			item = targetItem,
+			quantity = quantity,
+			color = nil
+		})
+	end)
+	if not ok then
+		return false, "调用失败"
+	end
+	return resp == true, tostring(resp)
+end
 --====【传送点数据，来自PY】====
 local tpPointList = {
 	{ n = "车辆经销商", p = Vector3.new(3719.9502, 3.0185735, -333.31186), region = "圣奥里" },
@@ -3475,6 +3508,134 @@ for regName, arr in pairs(group) do
 		})
 	end
 end
+local ShopTab = Section:Tab({
+	Title = "远程商店",
+	Icon = "cart-shopping"
+})
+
+--====黑市道具====
+ShopTab:Divider()
+ShopTab:Paragraph({Title="黑市道具"})
+ShopTab:Button({
+	Title = "解密电路",
+	Callback = function()
+		local succ,msg = BuyItem("Black Market/1","Decryption Circuit",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "绿色USB",
+	Callback = function()
+		local succ,msg = BuyItem("Black Market/5","Green USB",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "喷漆",
+	Callback = function()
+		local succ,msg = BuyItem("Black Market/8","Crew Graffiti",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "C4炸药",
+	Callback = function()
+		local succ,msg = BuyItem("Black Market/4","C4",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "入侵工具",
+	Callback = function()
+		local succ,msg = BuyItem("Black Market/3","Hacking Tool",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "撬锁工具",
+	Callback = function()
+		local succ,msg = BuyItem("Black Market/2","Lockpick Device",1,false)
+		warn(succ,msg)
+	end
+})
+
+--====近战武器====
+ShopTab:Divider()
+ShopTab:Paragraph({Title="近战武器"})
+ShopTab:Button({
+	Title = "小刀",
+	Callback = function()
+		local succ,msg = BuyItem("Weapons/1","Knife",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "斧子",
+	Callback = function()
+		local succ,msg = BuyItem("Weapons/2","Battle Axe",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "棒球棍",
+	Callback = function()
+		local succ,msg = BuyItem("Weapons/3","Bat",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "大砍刀",
+	Callback = function()
+		local succ,msg = BuyItem("Weapons/4","Machete",1,false)
+		warn(succ,msg)
+	end
+})
+
+--====通用物品====
+ShopTab:Divider()
+ShopTab:Paragraph({Title="通用道具"})
+ShopTab:Button({
+	Title = "望远镜",
+	Callback = function()
+		local succ,msg = BuyItem("Items","Binoculars",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "降落伞",
+	Callback = function()
+		local succ,msg = BuyItem("Items","Black Parachute",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "钓鱼竿",
+	Callback = function()
+		local succ,msg = BuyItem("Items","Fishing Rod",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "金属探测仪",
+	Callback = function()
+		local succ,msg = BuyItem("Items","Metal Detector",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "铲子",
+	Callback = function()
+		local succ,msg = BuyItem("Items","Trowel",1,false)
+		warn(succ,msg)
+	end
+})
+ShopTab:Button({
+	Title = "维修包",
+	Callback = function()
+		local succ,msg = BuyItem("Items","Repair Kit",1,false)
+		warn(succ,msg)
+	end
+})
 	mainWindow:OnClose(function()
 		isWindowOpen = false;
 		mainWindow = nil

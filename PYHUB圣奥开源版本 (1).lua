@@ -2177,6 +2177,68 @@ local function createVehicleQuick()
 	end)
 end
 local speedLimitEnabled = false
+--====【传送点数据，来自PY】====
+local tpPointList = {
+	{ n = "车辆经销商", p = Vector3.new(3719.9502, 3.0185735, -333.31186), region = "圣奥里" },
+	{ n = "医院", p = Vector3.new(3980.091, 2.8760607, -138.79454), region = "圣奥里" },
+	{ n = "警察局", p = Vector3.new(3364.2732, 3.918808, -394.72336), region = "圣奥里" },
+	{ n = "圣奥里修车店", p = Vector3.new(2782.4688, 2.6309958, -418.5993), region = "圣奥里" },
+	{ n = "圣奥里银行", p = Vector3.new(3134.0542, 6.1160483, -171.36977), region = "圣奥里" },
+	{ n = "圣奥里服装店", p = Vector3.new(3617.9126, 3.1072206, -452.82065), region = "圣奥里" },
+	{ n = "圣奥里平民重生", p = Vector3.new(3741.115, 3.7205737, -438.106), region = "圣奥里" },
+	{ n = "圣奥里码头", p = Vector3.new(4527.6562, -23.968239, -280.59357), region = "圣奥里" },
+	{ n = "圣奥里餐饮店", p = Vector3.new(3182.4167, 3.018592, 426.5179), region = "圣奥里" },
+	{ n = "消防部门", p = Vector3.new(3578.676, 8.408823, 579.6568), region = "圣奥里" },
+	{ n = "宠物店", p = Vector3.new(3678.2373, 3.01792, 693.1146), region = "圣奥里" },
+	{ n = "圣奥里大码头", p = Vector3.new(2736.3076, 2.630299, -1120.333), region = "圣奥里" },
+	{ n = "圣奥里海滩桥下(消星点)", p = Vector3.new(3964.5044, -25.06821, -854.05725), region = "圣奥里" },
+	{ n = "大景超级超市", p = Vector3.new(3936.5828, 3.038293, 1136.3264), region = "大景" },
+	{ n = "转镜中心", p = Vector3.new(4152.92, 2.631675, 941.44604), region = "大景" },
+	{ n = "道路服务", p = Vector3.new(4271.3325, 2.628108, 1200.0869), region = "大景" },
+	{ n = "大景餐饮店", p = Vector3.new(4476.9976, 3.037825, 906.803), region = "大景" },
+	{ n = "送货中心(美团外卖)", p = Vector3.new(4399.4194, 3.038999, 1609.4559), region = "大景" },
+	{ n = "大景卖车店", p = Vector3.new(3434.3774, 42.931786, 2687.997), region = "大景" },
+	{ n = "莱斯维尔餐饮店", p = Vector3.new(753.7578, 3.039824, 998.133), region = "莱斯维尔" },
+	{ n = "莱斯维尔服装店", p = Vector3.new(820.7451, 2.766988, 1047.4457), region = "莱斯维尔" },
+	{ n = "莱斯维尔自由广场", p = Vector3.new(926.5234, 2.630995, 865.7648), region = "莱斯维尔" },
+	{ n = "莱斯维尔码头(游艇)", p = Vector3.new(947.8402, -22.529087, 1216.0857), region = "莱斯维尔" },
+	{ n = "米尔顿左上加油站", p = Vector3.new(1145.6357, 2.630916, -864.2737), region = "米尔顿" },
+	{ n = "米尔顿右下加油站", p = Vector3.new(-1646.8027, 2.630164, 1812.8947), region = "米尔顿" },
+	{ n = "米尔顿上方加油站", p = Vector3.new(-900.70166, 2.630927, 1124.6831), region = "米尔顿" },
+	{ n = "米尔顿居民区", p = Vector3.new(-528.56555, 2.630996, 1331.9817), region = "米尔顿" },
+	{ n = "约克镇小银行", p = Vector3.new(-668.2172, 2.630995, -65.34784), region = "约克镇" },
+	{ n = "约克镇修车厂", p = Vector3.new(-407.16302, 3.076807, -6.098211), region = "约克镇" },
+	{ n = "约克镇枪店", p = Vector3.new(-323.8693, 3.037825, 37.14967), region = "约克镇" },
+	{ n = "约克镇重生点", p = Vector3.new(-219.56032, 3.039824, -85.72543), region = "约克镇" },
+	{ n = "约克镇当铺", p = Vector3.new(-168.51373, 3.039, -106.92653), region = "约克镇" },
+	{ n = "约克镇卫星车", p = Vector3.new(-302.09357, 3.037825, -167.62102), region = "约克镇" },
+	{ n = "约克镇中心点", p = Vector3.new(-275.9952, 2.630996, -139.98535), region = "约克镇" },
+	{ n = "黑色市场", p = Vector3.new(1038.9698, -22.73295, 895.43024), region = "其他" },
+	{ n = "鱼夫码头", p = Vector3.new(-50.147552, -24.555279, 1462.146), region = "其他" },
+	{ n = "农场", p = Vector3.new(-1268.3392, 2.572412, 2560.0603), region = "其他" },
+	{ n = "监狱门口", p = Vector3.new(-1697.9319, 2.630666, 1284.5674), region = "其他" },
+	{ n = "监狱广场", p = Vector3.new(-1600.6024, 2.631028, 1268.06), region = "其他" },
+	{ n = "代尔山", p = Vector3.new(847.063, 194.11575, -326.2127), region = "其他" },
+	{ n = "水帘洞(消星点)", p = Vector3.new(3040.956, 109.68854, 2711.0693), region = "其他" },
+	{ n = "大桥", p = Vector3.new(949.01495, 25.215754, 2897.6548), region = "其他" },
+	{ n = "地图右下(消星点)", p = Vector3.new(-1651.385, 2.414712, 3225.2783), region = "其他" },
+	{ n = "下部加油站", p = Vector3.new(2270.3782, 2.630927, 154.16148), region = "其他" },
+	{ n = "游戏厅", p = Vector3.new(2934.8938, 2.956458, 1693.66), region = "其他" },
+	{ n = "高尔夫", p = Vector3.new(2280.767, 3.037836, 1982.3573), region = "其他" },
+	{ n = "修船厂", p = Vector3.new(4096.4053, -30.401447, 2865.0452), region = "其他" },
+}
+
+--传送核心函数
+local function TeleportToPoint(pos)
+	local lp = game.Players.LocalPlayer
+	local char = lp.Character
+	if not char then return end
+	local root = char:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	pcall(function()
+		root.CFrame = CFrame.new(pos)
+	end)
+end
 local originalGetSpeedLimit
 pcall(function()
 	local Algorithms = require(ReplicatedStorage.Modules.Algorithms)
@@ -3389,6 +3451,30 @@ PlayerTab:Toggle({
 			refreshESP()
 		end
 	})
+	local TeleportTab = Section:Tab({
+	Title = "传送点位",
+	Icon = "map‑marker"
+})
+
+local group = {}
+for _,entry in ipairs(tpPointList) do
+	if not group[entry.region] then
+		group[entry.region] = {}
+	end
+	table.insert(group[entry.region], entry)
+end
+
+for regName, arr in pairs(group) do
+	TeleportTab:Divider()
+	for _,pt in ipairs(arr) do
+		TeleportTab:Button({
+			Title = regName.."｜"..pt.n,
+			Callback = function()
+				TeleportToPoint(pt.p)
+			end
+		})
+	end
+end
 	mainWindow:OnClose(function()
 		isWindowOpen = false;
 		mainWindow = nil

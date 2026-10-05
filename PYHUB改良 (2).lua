@@ -562,19 +562,8 @@ local function getPromptPosition(prompt)
 	end
 end
 local function firePrompt(prompt)
-	if not prompt then
-		return
-	end
-	pcall(function()
-		if fireproximityprompt then
-			fireproximityprompt(prompt, 0)
-		else
-			prompt.HoldDuration = 0
-			prompt:InputHoldBegin()
-			task.wait(0.1)
-			prompt:InputHoldEnd()
-		end
-	end)
+--禁用自动模拟E，杜绝幽灵E
+	return
 end
 local function teleportTo(pos)
 	local character, _, root = GetCharacter(LocalPlayer)

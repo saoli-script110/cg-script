@@ -2543,19 +2543,6 @@ local function createMainWindow()
 	Icon = "hand"
 })
 
-InteractTab:Slider({
-	Title = "Prompt按住时长",
-	Desc = "交互弹窗按住时间",
-	Value = { Min = 0, Max = 10, Default = 0 },
-	Callback = function(holdTime)
-		_G.InteractHoldTime = holdTime
-		for _, descendant in ipairs(Workspace:GetDescendants()) do
-			if descendant:IsA("ProximityPrompt") then
-				descendant.HoldDuration = holdTime
-			end
-		end
-	end,
-})
 
 
 
@@ -3849,14 +3836,4 @@ task.spawn(function()
 	if not okAll then
 		warn("[执行上报] 异常(已忽略，不影响主脚本): " .. tostring(errAll))
 	end
-end)
-Workspace.DescendantAdded:Connect(function(obj)
-	task.spawn(function()
-		if obj:IsA("ProximityPrompt") then
-			if _G.InteractHoldTime then
-				obj.HoldDuration = _G.InteractHoldTime
-			end
-			
-		end
-	end)
 end)

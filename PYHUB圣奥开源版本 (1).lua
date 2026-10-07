@@ -2543,32 +2543,34 @@ local InteractTab = Section:Tab({
 	Title = "交互设置",
 	Icon = "hand"
 })
--- 交互修改总开关全局变量
+-- =====手动初始化默认值，跟滑块默认对齐！=====
 _G.InteractModifyEnable = false
+_G.InteractHoldTime = 0
+_G.InteractMaxDist = 25
 
--- =========新增的总开关=========
+-- 统一函数：更新地图所有ProximityPrompt
+local function UpdateAllProximityPrompt()
+	if not _G.InteractModifyEnable then return end
+	for _, descendant in ipairs(Workspace:GetDescendants()) do
+		if descendant:IsA("ProximityPrompt") then
+			descendant.HoldDuration = _G.InteractHoldTime
+			descendant.MaxActivationDistance = _G.InteractMaxDist
+		end
+	end
+end
+
+-- =========总开关=========
 InteractTab:Toggle({
-	Title = "启用ProximityPrompt修改",
+	Title = "启用交互",
 	Desc = "开启才会修改交互弹窗，开启瞬间直接全局生效，无需拖动滑块",
 	Value = false,
 	Callback = function(v)
 		_G.InteractModifyEnable = v
 		if v then
-			--打开开关立刻对地图所有交互弹窗应用设置
-			for _, descendant in ipairs(Workspace:GetDescendants()) do
-				if descendant:IsA("ProximityPrompt") then
-					if _G.InteractHoldTime ~= nil then
-						descendant.HoldDuration = _G.InteractHoldTime
-					end
-					if _G.InteractMaxDist ~= nil then
-						descendant.MaxActivationDistance = _G.InteractMaxDist
-					end
-				end
-			end
+			UpdateAllProximityPrompt() --打开开关直接调用统一更新函数
 		end
 	end,
 })
-
 InteractTab:Divider()
 
 InteractTab:Slider({
@@ -2577,13 +2579,7 @@ InteractTab:Slider({
 	Value = { Min = 0, Max = 10, Default = 0 },
 	Callback = function(holdTime)
 		_G.InteractHoldTime = holdTime
-		--总开关关闭就直接退出，不做修改
-		if not _G.InteractModifyEnable then return end
-		for _, descendant in ipairs(Workspace:GetDescendants()) do
-			if descendant:IsA("ProximityPrompt") then
-				descendant.HoldDuration = holdTime
-			end
-		end
+		UpdateAllProximityPrompt() --滑块变动也调用统一更新函数
 	end,
 })
 InteractTab:Slider({
@@ -2592,14 +2588,10 @@ InteractTab:Slider({
 	Value = { Min = 5, Max = 150, Default = 25 },
 	Callback = function(distance)
 		_G.InteractMaxDist = distance
-		if not _G.InteractModifyEnable then return end
-		for _, descendant in ipairs(Workspace:GetDescendants()) do
-			if descendant:IsA("ProximityPrompt") then
-				descendant.MaxActivationDistance = distance
-			end
-		end
+		UpdateAllProximityPrompt() --滑块变动也调用统一更新函数
 	end,
 })
+
 InteractTab:Divider()
 InteractTab:Toggle({
 	Title = "启用人物穿墙Noclip",

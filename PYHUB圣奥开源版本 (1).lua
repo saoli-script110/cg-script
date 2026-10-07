@@ -2538,34 +2538,32 @@ local function createMainWindow()
 	local Section = mainWindow:Section({
 		Title = "功能",
 		Opened = true
-	})local InteractTab = Section:Tab({
+	})
+local InteractTab = Section:Tab({
 	Title = "交互设置",
 	Icon = "hand"
 })
+-- 交互修改总开关全局变量
+_G.InteractModifyEnable = false
 
-InteractTab:Slider({
-	Title = "Prompt按住时长",
-	Desc = "交互弹窗按住时间",
-	Value = { Min = 0, Max = 10, Default = 0 },
-	Callback = function(holdTime)
-		_G.InteractHoldTime = holdTime
-		for _, descendant in ipairs(Workspace:GetDescendants()) do
-			if descendant:IsA("ProximityPrompt") then
-				descendant.HoldDuration = holdTime
-			end
-		end
-	end,
-})
-
-InteractTab:Slider({
-	Title = "Prompt触发距离",
-	Desc = "交互弹窗最大触发距离",
-	Value = { Min = 5, Max = 150, Default = 25 },
-	Callback = function(distance)
-		_G.InteractMaxDist = distance
-		for _, descendant in ipairs(Workspace:GetDescendants()) do
-			if descendant:IsA("ProximityPrompt") then
-				descendant.MaxActivationDistance = distance
+-- =========新增的总开关=========
+InteractTab:Toggle({
+	Title = "启用ProximityPrompt修改",
+	Desc = "开启才会修改交互弹窗，开启瞬间直接全局生效，无需拖动滑块",
+	Value = false,
+	Callback = function(v)
+		_G.InteractModifyEnable = v
+		if v then
+			--打开开关立刻对地图所有交互弹窗应用设置
+			for _, descendant in ipairs(Workspace:GetDescendants()) do
+				if descendant:IsA("ProximityPrompt") then
+					if _G.InteractHoldTime ~= nil then
+						descendant.HoldDuration = _G.InteractHoldTime
+					end
+					if _G.InteractMaxDist ~= nil then
+						descendant.MaxActivationDistance = _G.InteractMaxDist
+					end
+				end
 			end
 		end
 	end,
@@ -2573,6 +2571,36 @@ InteractTab:Slider({
 
 InteractTab:Divider()
 
+InteractTab:Slider({
+	Title = "Prompt按住时长",
+	Desc = "交互弹窗按住时间",
+	Value = { Min = 0, Max = 10, Default = 0 },
+	Callback = function(holdTime)
+		_G.InteractHoldTime = holdTime
+		--总开关关闭就直接退出，不做修改
+		if not _G.InteractModifyEnable then return end
+		for _, descendant in ipairs(Workspace:GetDescendants()) do
+			if descendant:IsA("ProximityPrompt") then
+				descendant.HoldDuration = holdTime
+			end
+		end
+	end,
+})
+InteractTab:Slider({
+	Title = "Prompt触发距离",
+	Desc = "交互弹窗最大触发距离",
+	Value = { Min = 5, Max = 150, Default = 25 },
+	Callback = function(distance)
+		_G.InteractMaxDist = distance
+		if not _G.InteractModifyEnable then return end
+		for _, descendant in ipairs(Workspace:GetDescendants()) do
+			if descendant:IsA("ProximityPrompt") then
+				descendant.MaxActivationDistance = distance
+			end
+		end
+	end,
+})
+InteractTab:Divider()
 InteractTab:Toggle({
 	Title = "启用人物穿墙Noclip",
 	Desc = "无视碰撞穿过物体",
@@ -2586,6 +2614,7 @@ InteractTab:Toggle({
 		end
 	end
 })
+
 	local Main = Section:Tab({
 		Title = "主要功能",
 		Icon = "sliders-h"
@@ -3864,11 +3893,12 @@ task.spawn(function()
 end)
 Workspace.DescendantAdded:Connect(function(obj)
 	task.spawn(function()
-		if obj:IsA("ProximityPrompt") then
-			if _G.InteractHoldTime then
+		--增加总开关判断，只有开启才修改新生成的交互弹窗
+		if obj:IsA("ProximityPrompt") and _G.InteractModifyEnable then
+			if _G.InteractHoldTime ~= nil then
 				obj.HoldDuration = _G.InteractHoldTime
 			end
-			if _G.InteractMaxDist then
+			if _G.InteractMaxDist ~= nil then
 				obj.MaxActivationDistance = _G.InteractMaxDist
 			end
 		end
